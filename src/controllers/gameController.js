@@ -6,12 +6,17 @@ async function getGames(req, res) {
   try {
     if (nameQuery) {
       const games = await connection.query(
-        "SELECT * FROM games WHERE LOWER (name) LIKE $1;",
+        `SELECT games.*, categories.name AS "categoryName" 
+        FROM games JOIN categories ON games."categoryId" = categories.id 
+        WHERE LOWER (games.name) LIKE $1;`,
         [`${nameQuery.toLowerCase()}%`]
       );
       return res.status(200).send(games.rows);
     }
-    const games = await connection.query("SELECT * FROM games;");
+    const games = await connection.query(
+      `SELECT games.*, categories.name AS "categoryName" 
+      FROM games JOIN categories ON games."categoryId" = categories.id;`
+    );
     res.status(200).send(games.rows);
   } catch (error) {
     res.status(500).send(error.message);
@@ -46,7 +51,8 @@ async function createGame(req, res) {
         .send({ error: "A game with that name already exists" });
     }
     await connection.query(
-      'INSERT INTO games (name, image, "stockTotal", "categoryId", "pricePerDay") VALUES ($1, $2, $3, $4, $5);',
+      `INSERT INTO games (name, image, "stockTotal", "categoryId", "pricePerDay") 
+      VALUES ($1, $2, $3, $4, $5);`,
       [name, image, stockTotal, categoryId, pricePerDay]
     );
     res.sendStatus(201);
