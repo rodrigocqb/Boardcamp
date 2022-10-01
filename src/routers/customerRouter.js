@@ -3,17 +3,24 @@ import {
   createCustomer,
   getCustomer,
   getCustomers,
+  updateCustomer,
 } from "../controllers/customerController.js";
 import isCpfRegistered from "../middlewares/customerCpfRequestValidationMiddleware.js";
+import isCustomerRegistered from "../middlewares/customerIdValidationMiddleware.js";
 import customerSchemaValidation from "../middlewares/customerSchemaValidationMiddleware.js";
 
 const router = express.Router();
 
 router.get("/customers", getCustomers);
-router.get("/customers/:id", getCustomer);
+router.get("/customers/:id", isCustomerRegistered, getCustomer);
 
 router.use(customerSchemaValidation);
-router.use(isCpfRegistered);
-router.post("/customers", createCustomer);
+router.post("/customers", isCpfRegistered, createCustomer);
+router.put(
+  "/customers/:id",
+  isCustomerRegistered,
+  isCpfRegistered,
+  updateCustomer
+);
 
 export default router;
