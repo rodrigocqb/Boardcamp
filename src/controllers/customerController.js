@@ -34,6 +34,29 @@ async function getCustomer(req, res) {
   }
 }
 
-async function createCustomer(req, res) {}
+async function createCustomer(req, res) {
+  const { name, phone, cpf, birthday } = req.body;
+  const validation = customerSchema.validate(req.body, { abortEarly: false });
+  if (validation.error) {
+    const errors = validation.error.details.map((v) => v.message);
+    return res.status(400).send(errors);
+  }
+  try {
+    const customer = (
+      await connection.query(`SELECT * FROM customers WHERE cpf = $1;`, [cpf])
+    ).rows[0];
+    if (customer) {
+      return res.status(409).send({ error: "Customer already exists" });
+    }
+    await connection.query(
+      `INSERT INTO customers (name, phone, cpf, birthday) 
+    VALUES ($1, $2, $3, $4)`,
+      [name, phone, cpf, birthday]
+    );
+    res.sendStatus(201);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+}
 
 export { getCustomers, getCustomer, createCustomer };
