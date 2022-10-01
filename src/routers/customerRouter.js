@@ -13,11 +13,15 @@ const router = express.Router();
 
 router.get("/customers", getCustomers);
 router.get("/customers/:id", isCustomerRegistered, getCustomer);
-
-router.use(customerSchemaValidation);
-router.post("/customers", isCpfRegistered, createCustomer);
+router.post(
+  "/customers",
+  customerSchemaValidation,
+  isCpfRegistered,
+  createCustomer
+);
 router.put(
   "/customers/:id",
+  customerSchemaValidation,
   isCustomerRegistered,
   isCpfRegistered,
   updateCustomer
