@@ -5,45 +5,67 @@ import rentalSchema from "../schemas/rentalSchema.js";
 async function getRentals(req, res) {
   const { customerId, gameId } = req.query;
   try {
-    let rentals;
     if (customerId && !gameId) {
-      rentals = (
+      const rentals = (
         await connection.query(
-          `SELECT * FROM rentals WHERE "customerId" = $1;`,
+          `SELECT rentals.*, 
+          json_build_object('id', customers.id, 'name', customers.name) AS customer,
+          json_build_object('id', games.id, 'name', games.name, 
+          'categoryId', games."categoryId", 'categoryName', categories.name) AS game
+          FROM rentals JOIN customers ON rentals."customerId" = customers.id
+          JOIN games ON rentals."gameId" = games.id
+          JOIN categories ON games."categoryId" = categories.id
+          WHERE rentals."customerId" = $1
+          GROUP BY rentals.id, customers.id, games.id, categories.name;`,
           [customerId]
         )
       ).rows;
+      return res.status(200).send(rentals);
     } else if (!customerId && gameId) {
-      rentals = (
-        await connection.query(`SELECT * FROM rentals WHERE "gameId" = $1;`, [
-          gameId,
-        ])
-      ).rows;
-    } else if (customerId && gameId) {
-      rentals = (
+      const rentals = (
         await connection.query(
-          `SELECT * FROM rentals WHERE "customerId" = $1 AND "gameId" = $2;`,
+          `SELECT rentals.*, 
+        json_build_object('id', customers.id, 'name', customers.name) AS customer,
+        json_build_object('id', games.id, 'name', games.name, 
+        'categoryId', games."categoryId", 'categoryName', categories.name) AS game
+        FROM rentals JOIN customers ON rentals."customerId" = customers.id
+        JOIN games ON rentals."gameId" = games.id
+        JOIN categories ON games."categoryId" = categories.id
+        WHERE rentals."gameId" = $1
+        GROUP BY rentals.id, customers.id, games.id, categories.name;`,
+          [gameId]
+        )
+      ).rows;
+      return res.status(200).send(rentals);
+    } else if (customerId && gameId) {
+      const rentals = (
+        await connection.query(
+          `SELECT rentals.*, 
+          json_build_object('id', customers.id, 'name', customers.name) AS customer,
+          json_build_object('id', games.id, 'name', games.name, 
+          'categoryId', games."categoryId", 'categoryName', categories.name) AS game
+          FROM rentals JOIN customers ON rentals."customerId" = customers.id
+          JOIN games ON rentals."gameId" = games.id
+          JOIN categories ON games."categoryId" = categories.id
+          WHERE rentals."customerId" = $1 AND rentals."gameId" = $2
+          GROUP BY rentals.id, customers.id, games.id, categories.name;`,
           [customerId, gameId]
         )
       ).rows;
+      return res.status(200).send(rentals);
     } else {
-      rentals = (await connection.query(`SELECT * FROM rentals;`)).rows;
+      const rentals = (
+        await connection.query(`SELECT rentals.*, 
+      json_build_object('id', customers.id, 'name', customers.name) AS customer,
+      json_build_object('id', games.id, 'name', games.name, 
+      'categoryId', games."categoryId", 'categoryName', categories.name) AS game
+      FROM rentals JOIN customers ON rentals."customerId" = customers.id
+      JOIN games ON rentals."gameId" = games.id
+      JOIN categories ON games."categoryId" = categories.id
+      GROUP BY rentals.id, customers.id, games.id, categories.name;`)
+      ).rows;
+      return res.status(200).send(rentals);
     }
-    rentals.forEach(async (rental) => {
-      rental.customer = (
-        await connection.query(
-          `SELECT id, name FROM customers WHERE id = $1;`,
-          [rental.customerId]
-        )
-      ).rows[0];
-      rental.game = (
-        await connection.query(`SELECT games.id, games.name, games."categoryId", 
-        categories.name AS "categoryName"
-            FROM games JOIN categories 
-            ON games."categoryId" = categories.id;`)
-      ).rows[0];
-    });
-    res.status(200).send(rentals);
   } catch (error) {
     res.status(500).send(error.message);
   }
