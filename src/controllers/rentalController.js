@@ -136,12 +136,7 @@ async function createRental(req, res) {
 async function endRental(req, res) {
   const { id } = req.params;
   try {
-    const rental = (
-      await connection.query("SELECT * FROM rentals WHERE id = $1", [id])
-    ).rows[0];
-    if (!rental) {
-      return res.status(404).send({ error: "Rental does not exist" });
-    }
+    const rental = res.locals.rental;
     if (rental.returnDate) {
       return res
         .status(400)
@@ -167,4 +162,14 @@ async function endRental(req, res) {
   }
 }
 
-export { getRentals, createRental, endRental };
+async function deleteRental(req, res) {
+  const { id } = req.params;
+  const rental = res.locals.rental;
+  if (rental.returnDate === null) {
+    return res.status(400).send({ error: "Rental is not yet finished" });
+  }
+  await connection.query("DELETE FROM rentals WHERE id = $1", [id]);
+  res.sendStatus(200);
+}
+
+export { getRentals, createRental, endRental, deleteRental };
