@@ -133,4 +133,38 @@ async function createRental(req, res) {
   }
 }
 
-export { getRentals, createRental };
+async function endRental(req, res) {
+  const { id } = req.params;
+  try {
+    const rental = (
+      await connection.query("SELECT * FROM rentals WHERE id = $1", [id])
+    ).rows[0];
+    if (!rental) {
+      return res.status(404).send({ error: "Rental does not exist" });
+    }
+    if (rental.returnDate) {
+      return res
+        .status(400)
+        .send({ error: "Rental has already been finished" });
+    }
+    const today = dayjs();
+    const dateDifference = today.diff(rental.rentDate, "day");
+    console.log(dateDifference);
+    let delayFee = 0;
+    if (dateDifference > rental.daysRented) {
+      delayFee =
+        (dateDifference - rental.daysRented) *
+        (rental.originalPrice / rental.daysRented);
+    }
+    await connection.query(
+      `UPDATE rentals 
+    SET "returnDate" = $1, "delayFee" = $2 WHERE id = $3`,
+      [dayjs(today).format("YYYY-MM-DD"), delayFee, id]
+    );
+    res.sendStatus(200);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+}
+
+export { getRentals, createRental, endRental };
