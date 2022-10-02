@@ -15,8 +15,7 @@ async function getRentals(req, res) {
           FROM rentals JOIN customers ON rentals."customerId" = customers.id
           JOIN games ON rentals."gameId" = games.id
           JOIN categories ON games."categoryId" = categories.id
-          WHERE rentals."customerId" = $1
-          GROUP BY rentals.id, customers.id, games.id, categories.name;`,
+          WHERE rentals."customerId" = $1;`,
           [customerId]
         )
       ).rows;
@@ -31,8 +30,7 @@ async function getRentals(req, res) {
         FROM rentals JOIN customers ON rentals."customerId" = customers.id
         JOIN games ON rentals."gameId" = games.id
         JOIN categories ON games."categoryId" = categories.id
-        WHERE rentals."gameId" = $1
-        GROUP BY rentals.id, customers.id, games.id, categories.name;`,
+        WHERE rentals."gameId" = $1;`,
           [gameId]
         )
       ).rows;
@@ -47,8 +45,7 @@ async function getRentals(req, res) {
           FROM rentals JOIN customers ON rentals."customerId" = customers.id
           JOIN games ON rentals."gameId" = games.id
           JOIN categories ON games."categoryId" = categories.id
-          WHERE rentals."customerId" = $1 AND rentals."gameId" = $2
-          GROUP BY rentals.id, customers.id, games.id, categories.name;`,
+          WHERE rentals."customerId" = $1 AND rentals."gameId" = $2;`,
           [customerId, gameId]
         )
       ).rows;
@@ -61,8 +58,7 @@ async function getRentals(req, res) {
       'categoryId', games."categoryId", 'categoryName', categories.name) AS game
       FROM rentals JOIN customers ON rentals."customerId" = customers.id
       JOIN games ON rentals."gameId" = games.id
-      JOIN categories ON games."categoryId" = categories.id
-      GROUP BY rentals.id, customers.id, games.id, categories.name;`)
+      JOIN categories ON games."categoryId" = categories.id;`)
       ).rows;
       return res.status(200).send(rentals);
     }
