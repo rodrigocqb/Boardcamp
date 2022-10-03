@@ -23,11 +23,14 @@ async function getCustomers(req, res) {
     desc = "ASC";
   }
   try {
-    if (cpf) {
+    if (cpf && !limit) {
       const customers = (
         await connection.query(
-          `SELECT * FROM customers WHERE cpf LIKE $1 
-        ORDER BY "${order}" ${desc} OFFSET $1;`,
+          `SELECT *, (COALESCE((SELECT COUNT(*) FROM rentals 
+          WHERE rentals."customerId" = customers.id 
+          GROUP BY rentals."customerId"), 0)) AS "rentalsCount"
+           FROM customers WHERE cpf LIKE $1 
+        ORDER BY "${order}" ${desc} OFFSET $2;`,
           [`${cpf}%`, offset]
         )
       ).rows;
@@ -36,7 +39,10 @@ async function getCustomers(req, res) {
     if (cpf && limit) {
       const customers = (
         await connection.query(
-          `SELECT * FROM customers WHERE cpf LIKE $1 
+          `SELECT *, (COALESCE((SELECT COUNT(*) FROM rentals 
+          WHERE rentals."customerId" = customers.id 
+          GROUP BY rentals."customerId"), 0)) AS "rentalsCount"
+           FROM customers WHERE cpf LIKE $1 
         ORDER BY "${order}" ${desc} LIMIT $2 OFFSET $3;`,
           [`${cpf}%`, limit, offset]
         )
@@ -46,7 +52,10 @@ async function getCustomers(req, res) {
     if (limit && !cpf) {
       const customers = (
         await connection.query(
-          `SELECT * FROM customers 
+          `SELECT *, (COALESCE((SELECT COUNT(*) FROM rentals 
+          WHERE rentals."customerId" = customers.id 
+          GROUP BY rentals."customerId"), 0)) AS "rentalsCount"
+           FROM customers 
     ORDER BY "${order}" ${desc} LIMIT $1 OFFSET $2;`,
           [limit, offset]
         )
@@ -55,7 +64,9 @@ async function getCustomers(req, res) {
     }
     const customers = (
       await connection.query(
-        `SELECT * FROM customers 
+        `SELECT *, (COALESCE((SELECT COUNT(*) FROM rentals 
+        WHERE rentals."customerId" = customers.id 
+        GROUP BY rentals."customerId"), 0)) AS "rentalsCount" FROM customers 
     ORDER BY "${order}" ${desc} OFFSET $1;`,
         [offset]
       )

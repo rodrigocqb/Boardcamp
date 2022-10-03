@@ -28,7 +28,10 @@ async function getGames(req, res) {
   try {
     if (nameQuery && !limit) {
       const games = await connection.query(
-        `SELECT games.*, categories.name AS "categoryName" 
+        `SELECT games.*, categories.name AS "categoryName",
+        (COALESCE((SELECT COUNT(*) FROM rentals 
+      WHERE rentals."gameId" = games.id 
+      GROUP BY rentals."gameId"), 0)) AS "rentalsCount" 
         FROM games JOIN categories ON games."categoryId" = categories.id 
         WHERE LOWER (games.name) LIKE $1
         ORDER BY "${order}" ${desc}
@@ -39,7 +42,10 @@ async function getGames(req, res) {
     }
     if (nameQuery && limit) {
       const games = await connection.query(
-        `SELECT games.*, categories.name AS "categoryName" 
+        `SELECT games.*, categories.name AS "categoryName",
+        (COALESCE((SELECT COUNT(*) FROM rentals 
+      WHERE rentals."gameId" = games.id 
+      GROUP BY rentals."gameId"), 0)) AS "rentalsCount" 
         FROM games JOIN categories ON games."categoryId" = categories.id 
         WHERE LOWER (games.name) LIKE $1
         ORDER BY "${order}" ${desc} LIMIT $2 OFFSET $3;`,
@@ -49,7 +55,10 @@ async function getGames(req, res) {
     }
     if (limit && !nameQuery) {
       const games = await connection.query(
-        `SELECT games.*, categories.name AS "categoryName" 
+        `SELECT games.*, categories.name AS "categoryName", 
+        (COALESCE((SELECT COUNT(*) FROM rentals 
+      WHERE rentals."gameId" = games.id 
+      GROUP BY rentals."gameId"), 0)) AS "rentalsCount"
         FROM games JOIN categories ON games."categoryId" = categories.id
         ORDER BY "${order}" ${desc} LIMIT $1 OFFSET $2;`,
         [limit, offset]
@@ -57,7 +66,10 @@ async function getGames(req, res) {
       return res.status(200).send(games.rows);
     }
     const games = await connection.query(
-      `SELECT games.*, categories.name AS "categoryName" 
+      `SELECT games.*, categories.name AS "categoryName",
+      (COALESCE((SELECT COUNT(*) FROM rentals 
+      WHERE rentals."gameId" = games.id 
+      GROUP BY rentals."gameId"), 0)) AS "rentalsCount"
       FROM games JOIN categories ON games."categoryId" = categories.id
       ORDER BY "${order}" ${desc} OFFSET $1;`,
       [offset]
