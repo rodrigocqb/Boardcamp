@@ -2,16 +2,61 @@ import connection from "../database/database.js";
 
 async function getCustomers(req, res) {
   const { cpf } = req.query;
+  const { limit } = req.query;
+  let { offset, order, desc } = req.query;
+  if (!offset) {
+    offset = 0;
+  }
+  if (
+    !order ||
+    (order !== "name" &&
+      order !== "id" &&
+      order !== "phone" &&
+      order !== "cpf" &&
+      order !== "birthday")
+  ) {
+    order = "id";
+  }
+  if (desc === "true") {
+    desc = "DESC";
+  } else {
+    desc = "ASC";
+  }
   try {
     if (cpf) {
       const customers = (
-        await connection.query(`SELECT * FROM customers WHERE cpf LIKE $1;`, [
-          `${cpf}%`,
-        ])
+        await connection.query(
+          `SELECT * FROM customers WHERE cpf LIKE $1 
+        ORDER BY "${order}" ${desc};`,
+          [`${cpf}%`]
+        )
       ).rows;
       return res.status(200).send(customers);
     }
-    const customers = (await connection.query(`SELECT * FROM customers;`)).rows;
+    if (cpf && limit) {
+      const customers = (
+        await connection.query(
+          `SELECT * FROM customers WHERE cpf LIKE $1 
+        ORDER BY "${order}" ${desc} LIMIT $2;`,
+          [`${cpf}%`, limit]
+        )
+      ).rows;
+      return res.status(200).send(customers);
+    }
+    if (limit && !cpf) {
+      const customers = (
+        await connection.query(
+          `SELECT * FROM customers 
+    ORDER BY "${order}" ${desc} LIMIT $1;`,
+          [limit]
+        )
+      ).rows;
+      return res.status(200).send(customers);
+    }
+    const customers = (
+      await connection.query(`SELECT * FROM customers 
+    ORDER BY "${order}" ${desc};`)
+    ).rows;
     return res.status(200).send(customers);
   } catch (error) {
     res.status(500).send(error.message);
