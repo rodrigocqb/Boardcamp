@@ -1,10 +1,12 @@
 import dayjs from "dayjs";
 import connection from "../database/database.js";
 import rentalSchema from "../schemas/rentalSchema.js";
+import joi from "joi";
+import joiDate from "@joi/date";
 
 async function getRentals(req, res) {
   const { customerId, gameId, limit, status } = req.query;
-  let { offset, order, desc } = req.query;
+  let { offset, order, desc, startDate } = req.query;
   if (!offset) {
     offset = 0;
   }
@@ -26,6 +28,15 @@ async function getRentals(req, res) {
   } else {
     desc = "ASC";
   }
+  const dateValidation = joi
+    .extend(joiDate)
+    .date()
+    .format("YYYY-MM-DD")
+    .validate(startDate);
+  if (dateValidation.error) {
+    console.log(startDate);
+    startDate = undefined;
+  }
   try {
     if (customerId && !gameId) {
       const rentals = (
@@ -45,6 +56,7 @@ async function getRentals(req, res) {
                 : 'AND rentals."returnDate" IS NOT NULL'
               : ""
           }
+          ${startDate ? `AND rentals."rentDate" >= '${startDate}'` : ""}
           ORDER BY "${order}" ${desc}
           ${Number(limit) > 0 ? `LIMIT ${limit}` : ""} OFFSET $2;`,
           [customerId, offset]
@@ -69,6 +81,7 @@ async function getRentals(req, res) {
               : 'AND rentals."returnDate" IS NOT NULL'
             : ""
         }
+        ${startDate ? `AND rentals."rentDate" >= '${startDate}'` : ""}
         ORDER BY "${order}" ${desc}
         ${Number(limit) > 0 ? `LIMIT ${limit}` : ""} OFFSET $2;`,
           [gameId, offset]
@@ -93,6 +106,7 @@ async function getRentals(req, res) {
                 : 'AND rentals."returnDate" IS NOT NULL'
               : ""
           }
+          ${startDate ? `AND rentals."rentDate" >= '${startDate}'` : ""}
           ORDER BY "${order}" ${desc}
           ${Number(limit) > 0 ? `LIMIT ${limit}` : ""} OFFSET $3;`,
           [customerId, gameId, offset]
@@ -114,6 +128,13 @@ async function getRentals(req, res) {
           ? status === "open"
             ? 'WHERE rentals."returnDate" IS NULL'
             : 'WHERE rentals."returnDate" IS NOT NULL'
+          : ""
+      }
+      ${
+        startDate
+          ? status === "closed" || status === "open"
+            ? `AND rentals."rentDate" >= '${startDate}'`
+            : `WHERE rentals."rentDate" >= '${startDate}'`
           : ""
       }
       ORDER BY "${order}" ${desc}
