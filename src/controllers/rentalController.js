@@ -3,7 +3,29 @@ import connection from "../database/database.js";
 import rentalSchema from "../schemas/rentalSchema.js";
 
 async function getRentals(req, res) {
-  const { customerId, gameId } = req.query;
+  const { customerId, gameId, limit, status } = req.query;
+  let { offset, order, desc } = req.query;
+  if (!offset) {
+    offset = 0;
+  }
+  if (
+    !order ||
+    (order !== "id" &&
+      order !== "customerId" &&
+      order !== "gameId" &&
+      order !== "rentDate" &&
+      order !== "daysRented" &&
+      order !== "returnDate" &&
+      order !== "originalPrice" &&
+      order !== "delayFee")
+  ) {
+    order = "id";
+  }
+  if (desc === "true") {
+    desc = "DESC";
+  } else {
+    desc = "ASC";
+  }
   try {
     if (customerId && !gameId) {
       const rentals = (
@@ -15,8 +37,17 @@ async function getRentals(req, res) {
           FROM rentals JOIN customers ON rentals."customerId" = customers.id
           JOIN games ON rentals."gameId" = games.id
           JOIN categories ON games."categoryId" = categories.id
-          WHERE rentals."customerId" = $1;`,
-          [customerId]
+          WHERE rentals."customerId" = $1 
+          ${
+            status === "closed" || status === "open"
+              ? status === "open"
+                ? 'AND rentals."returnDate" IS NULL'
+                : 'AND rentals."returnDate" IS NOT NULL'
+              : ""
+          }
+          ORDER BY "${order}" ${desc}
+          ${Number(limit) > 0 ? `LIMIT ${limit}` : ""} OFFSET $2;`,
+          [customerId, offset]
         )
       ).rows;
       return res.status(200).send(rentals);
@@ -30,8 +61,17 @@ async function getRentals(req, res) {
         FROM rentals JOIN customers ON rentals."customerId" = customers.id
         JOIN games ON rentals."gameId" = games.id
         JOIN categories ON games."categoryId" = categories.id
-        WHERE rentals."gameId" = $1;`,
-          [gameId]
+        WHERE rentals."gameId" = $1
+        ${
+          status === "closed" || status === "open"
+            ? status === "open"
+              ? 'AND rentals."returnDate" IS NULL'
+              : 'AND rentals."returnDate" IS NOT NULL'
+            : ""
+        }
+        ORDER BY "${order}" ${desc}
+        ${Number(limit) > 0 ? `LIMIT ${limit}` : ""} OFFSET $2;`,
+          [gameId, offset]
         )
       ).rows;
       return res.status(200).send(rentals);
@@ -45,20 +85,41 @@ async function getRentals(req, res) {
           FROM rentals JOIN customers ON rentals."customerId" = customers.id
           JOIN games ON rentals."gameId" = games.id
           JOIN categories ON games."categoryId" = categories.id
-          WHERE rentals."customerId" = $1 AND rentals."gameId" = $2;`,
-          [customerId, gameId]
+          WHERE rentals."customerId" = $1 AND rentals."gameId" = $2
+          ${
+            status === "closed" || status === "open"
+              ? status === "open"
+                ? 'AND rentals."returnDate" IS NULL'
+                : 'AND rentals."returnDate" IS NOT NULL'
+              : ""
+          }
+          ORDER BY "${order}" ${desc}
+          ${Number(limit) > 0 ? `LIMIT ${limit}` : ""} OFFSET $3;`,
+          [customerId, gameId, offset]
         )
       ).rows;
       return res.status(200).send(rentals);
     } else {
       const rentals = (
-        await connection.query(`SELECT rentals.*, 
+        await connection.query(
+          `SELECT rentals.*, 
       json_build_object('id', customers.id, 'name', customers.name) AS customer,
       json_build_object('id', games.id, 'name', games.name, 
       'categoryId', games."categoryId", 'categoryName', categories.name) AS game
       FROM rentals JOIN customers ON rentals."customerId" = customers.id
       JOIN games ON rentals."gameId" = games.id
-      JOIN categories ON games."categoryId" = categories.id;`)
+      JOIN categories ON games."categoryId" = categories.id
+      ${
+        status === "closed" || status === "open"
+          ? status === "open"
+            ? 'WHERE rentals."returnDate" IS NULL'
+            : 'WHERE rentals."returnDate" IS NOT NULL'
+          : ""
+      }
+      ORDER BY "${order}" ${desc}
+      ${Number(limit) > 0 ? `LIMIT ${limit}` : ""} OFFSET $1;`,
+          [offset]
+        )
       ).rows;
       return res.status(200).send(rentals);
     }

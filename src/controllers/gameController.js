@@ -31,8 +31,9 @@ async function getGames(req, res) {
         `SELECT games.*, categories.name AS "categoryName" 
         FROM games JOIN categories ON games."categoryId" = categories.id 
         WHERE LOWER (games.name) LIKE $1
-        ORDER BY "${order}" ${desc};`,
-        [`${nameQuery.toLowerCase()}%`]
+        ORDER BY "${order}" ${desc}
+        OFFSET $2;`,
+        [`${nameQuery.toLowerCase()}%`, offset]
       );
       return res.status(200).send(games.rows);
     }
@@ -41,8 +42,8 @@ async function getGames(req, res) {
         `SELECT games.*, categories.name AS "categoryName" 
         FROM games JOIN categories ON games."categoryId" = categories.id 
         WHERE LOWER (games.name) LIKE $1
-        ORDER BY "${order}" ${desc} LIMIT $2;`,
-        [`${nameQuery.toLowerCase()}%`, limit]
+        ORDER BY "${order}" ${desc} LIMIT $2 OFFSET $3;`,
+        [`${nameQuery.toLowerCase()}%`, limit, offset]
       );
       return res.status(200).send(games.rows);
     }
@@ -50,15 +51,16 @@ async function getGames(req, res) {
       const games = await connection.query(
         `SELECT games.*, categories.name AS "categoryName" 
         FROM games JOIN categories ON games."categoryId" = categories.id
-        ORDER BY "${order}" ${desc} LIMIT $1;`,
-        [limit]
+        ORDER BY "${order}" ${desc} LIMIT $1 OFFSET $2;`,
+        [limit, offset]
       );
       return res.status(200).send(games.rows);
     }
     const games = await connection.query(
       `SELECT games.*, categories.name AS "categoryName" 
       FROM games JOIN categories ON games."categoryId" = categories.id
-      ORDER BY "${order}" ${desc};`
+      ORDER BY "${order}" ${desc} OFFSET $1;`,
+      [offset]
     );
     res.status(200).send(games.rows);
   } catch (error) {

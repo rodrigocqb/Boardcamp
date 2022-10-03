@@ -27,8 +27,8 @@ async function getCustomers(req, res) {
       const customers = (
         await connection.query(
           `SELECT * FROM customers WHERE cpf LIKE $1 
-        ORDER BY "${order}" ${desc};`,
-          [`${cpf}%`]
+        ORDER BY "${order}" ${desc} OFFSET $1;`,
+          [`${cpf}%`, offset]
         )
       ).rows;
       return res.status(200).send(customers);
@@ -37,8 +37,8 @@ async function getCustomers(req, res) {
       const customers = (
         await connection.query(
           `SELECT * FROM customers WHERE cpf LIKE $1 
-        ORDER BY "${order}" ${desc} LIMIT $2;`,
-          [`${cpf}%`, limit]
+        ORDER BY "${order}" ${desc} LIMIT $2 OFFSET $3;`,
+          [`${cpf}%`, limit, offset]
         )
       ).rows;
       return res.status(200).send(customers);
@@ -47,15 +47,18 @@ async function getCustomers(req, res) {
       const customers = (
         await connection.query(
           `SELECT * FROM customers 
-    ORDER BY "${order}" ${desc} LIMIT $1;`,
-          [limit]
+    ORDER BY "${order}" ${desc} LIMIT $1 OFFSET $2;`,
+          [limit, offset]
         )
       ).rows;
       return res.status(200).send(customers);
     }
     const customers = (
-      await connection.query(`SELECT * FROM customers 
-    ORDER BY "${order}" ${desc};`)
+      await connection.query(
+        `SELECT * FROM customers 
+    ORDER BY "${order}" ${desc} OFFSET $1;`,
+        [offset]
+      )
     ).rows;
     return res.status(200).send(customers);
   } catch (error) {

@@ -24,7 +24,8 @@ async function getCategories(req, res) {
       return res.status(200).send(categories.rows);
     }
     const categories = await connection.query(
-      `SELECT * FROM categories ORDER BY ${order} ${desc};`
+      `SELECT * FROM categories ORDER BY ${order} ${desc} OFFSET $1;`,
+      [offset]
     );
     res.status(200).send(categories.rows);
   } catch (error) {
