@@ -3,19 +3,62 @@ import { gameSchema } from "../schemas/gameSchema.js";
 
 async function getGames(req, res) {
   const nameQuery = req.query.name;
+  const { limit } = req.query;
+  let { offset, order, desc } = req.query;
+  if (!offset) {
+    offset = 0;
+  }
+  if (
+    !order ||
+    (order !== "name" &&
+      order !== "id" &&
+      order !== "stockTotal" &&
+      order !== "image" &&
+      order !== "categoryId" &&
+      order !== "pricePerDay" &&
+      order !== "categoryName")
+  ) {
+    order = "id";
+  }
+  if (desc === "true") {
+    desc = "DESC";
+  } else {
+    desc = "ASC";
+  }
   try {
-    if (nameQuery) {
+    if (nameQuery && !limit) {
       const games = await connection.query(
         `SELECT games.*, categories.name AS "categoryName" 
         FROM games JOIN categories ON games."categoryId" = categories.id 
-        WHERE LOWER (games.name) LIKE $1;`,
+        WHERE LOWER (games.name) LIKE $1
+        ORDER BY "${order}" ${desc};`,
         [`${nameQuery.toLowerCase()}%`]
+      );
+      return res.status(200).send(games.rows);
+    }
+    if (nameQuery && limit) {
+      const games = await connection.query(
+        `SELECT games.*, categories.name AS "categoryName" 
+        FROM games JOIN categories ON games."categoryId" = categories.id 
+        WHERE LOWER (games.name) LIKE $1
+        ORDER BY "${order}" ${desc} LIMIT $2;`,
+        [`${nameQuery.toLowerCase()}%`, limit]
+      );
+      return res.status(200).send(games.rows);
+    }
+    if (limit && !nameQuery) {
+      const games = await connection.query(
+        `SELECT games.*, categories.name AS "categoryName" 
+        FROM games JOIN categories ON games."categoryId" = categories.id
+        ORDER BY "${order}" ${desc} LIMIT $1;`,
+        [limit]
       );
       return res.status(200).send(games.rows);
     }
     const games = await connection.query(
       `SELECT games.*, categories.name AS "categoryName" 
-      FROM games JOIN categories ON games."categoryId" = categories.id;`
+      FROM games JOIN categories ON games."categoryId" = categories.id
+      ORDER BY "${order}" ${desc};`
     );
     res.status(200).send(games.rows);
   } catch (error) {
