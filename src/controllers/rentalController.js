@@ -246,8 +246,54 @@ async function deleteRental(req, res) {
   if (rental.returnDate === null) {
     return res.status(400).send({ error: "Rental is not yet finished" });
   }
-  await connection.query("DELETE FROM rentals WHERE id = $1", [id]);
-  res.sendStatus(200);
+  try {
+    await connection.query("DELETE FROM rentals WHERE id = $1", [id]);
+    res.sendStatus(200);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
 }
 
-export { getRentals, createRental, endRental, deleteRental };
+async function getMetrics(req, res) {
+  let { startDate, endDate } = req.query;
+  const startDateValidation = joi
+    .extend(joiDate)
+    .date()
+    .format("YYYY-MM-DD")
+    .validate(startDate);
+  if (startDateValidation.error) {
+    console.log(startDate);
+    startDate = undefined;
+  }
+  const endDateValidation = joi
+    .extend(joiDate)
+    .date()
+    .format("YYYY-MM-DD")
+    .validate(endDate);
+  if (endDateValidation.error) {
+    console.log(startDate);
+    endDate = undefined;
+  }
+  try {
+    const metrics = (
+      await connection.query(`SELECT (SUM("originalPrice")+
+      (SELECT SUM("delayFee") FROM rentals WHERE "delayFee" IS NOT NULL)) AS revenue,
+    COUNT(*) AS rentals, 
+    ROUND((AVG("originalPrice") + 
+    (SELECT AVG("delayFee") FROM rentals WHERE "delayFee" IS NOT NULL))) as average FROM rentals
+    ${startDate ? `WHERE "rentDate" >= '${startDate}'` : ""}
+    ${
+      endDate
+        ? startDate
+          ? `AND "rentDate" <= '${endDate}'`
+          : `WHERE "rentDate" <= '${endDate}'`
+        : ""
+    };`)
+    ).rows[0];
+    res.status(200).send(metrics);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+}
+
+export { getRentals, createRental, endRental, deleteRental, getMetrics };
